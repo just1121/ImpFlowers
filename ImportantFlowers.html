@@ -758,7 +758,7 @@
             }
         }
 
-        // Function to handle image upload (development-friendly)
+        // Function to handle image upload with robust error handling
         async function uploadImageToStorage(file, bookId) {
             // Check if we're in development mode (localhost)
             const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -802,6 +802,7 @@
                                 const storageRef = ref(storage, `book-covers/${bookId}/${Date.now()}.jpg`);
                                 const snapshot = await uploadBytes(storageRef, blob, metadata);
                                 const downloadURL = await getDownloadURL(snapshot.ref);
+                                console.log("Upload successful:", downloadURL);
                                 resolve(downloadURL);
                             } catch (error) {
                                 console.error("Upload error details:", error);
