@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Important Flowers - Publication Schedule</title>
+    <!-- Favicon -->
+    <link rel="icon" href="static/favicon (1).ico" type="image/x-icon">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Playfair Display for headings, Montserrat for body -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif; /* Applied Montserrat to body */
+            overflow-x: hidden; /* Prevent horizontal scrollbar from body */
+            background-color: #f8f8f8; /* Light background */
+        }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif; /* Applied Playfair Display to headings */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a0a0a0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        #timeline-container {
+            position: relative;
+            overflow-x: auto; /* Allows horizontal scrolling */
+            padding-bottom: 20px; /* Space for scrollbar */
+            cursor: grab;
+            user-select: none;
+            height: 484px; /* 384px (initial h-96) + 100px */
+        }
+
+        #timeline-line {
+            height: 4px;
+            background-color: #e0e0e0;
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            width: 100%; /* Will be dynamically adjusted by JS based on zoom */
+        }
+
+        .book-marker {
+            position: absolute;
+            width: 100px; /* Base width for book cover */
+            height: 150px; /* Base height for book cover */
+            cursor: grab; /* Changed to grab for draggable */
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border-radius: 8px; /* Rounded corners for book covers */
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 5; /* Ensure books are above timeline line */
+        }
+
+        .book-marker.top-aligned {
+            top: 25%; /* Position above the line */
+            transform: translate(-50%, -50%);
+        }
+
+        .book-marker.bottom-aligned {
+            top: 75%; /* Position below the line */
+            transform: translate(-50%, -50%);
+        }
+
+        .book-marker:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .book-marker.dragging {
+            cursor: grabbing;
+            z-index: 10; /* Bring dragged item to front */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            opacity: 0.8;
+        }
+
+        .book-marker img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px; /* Ensure image also has rounded corners */
+        }
+
+        .year-marker {
+            position: absolute;
+            top: 0; /* Position at the top of the timeline container */
+            height: 100%; /* Span full height of the timeline area */
+            width: 2px;
+            background-color: #ccc;
+            transform: translateX(-50%);
+            z-index: 0; /* Behind book markers */
+        }
+
+        .year-label {
+            position: absolute;
+            top: 10px; /* Position above the timeline */
+            transform: translateX(-50%);
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            color: #333;
+            z-index: 1;
+        }
+
+        /* Modal specific styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 12px; /* More rounded corners for modal */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        .modal-overlay.open .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            color: #333;
+        }
+
+        /* Zoom slider styling */
+        .zoom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            border-radius: 4px;
+        }
+
+        .zoom-slider:hover {
+            opacity: 1;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6; /* Tailwind blue-500 */
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .zoom-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .book-marker {
+                width: 70px;
+                height: 105px;
+            }
+            .year-label {
+                font-size: 1rem;
+            }
+            .modal-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4 px-6 flex justify-between items-center z-20 sticky top-0">
+        <div class="h-20"> <!-- Set height to 80px -->
+            <!-- IMPORTANT FLOWERS LOGO HERE -->
+            <img src="static/ImpFlowers.png" alt="Important Flowers Logo" class="h-full object-contain">
+        </div>
+        <nav class="flex items-center space-x-4">
+            <button id="addNewBookBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors duration-200 text-sm font-medium">
+                + Add New Book
+            </button>
+            <a href="#" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md transition-colors duration-200">About</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md transition-colors duration-200">Contact</a>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-6 bg-pink-50"> <!-- Added bg-pink-50 for light pink background -->
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Publication Schedule Overview</h1>
+
+        <!-- User ID Display -->
+        <div class="text-center text-sm text-gray-500 mb-4 hidden">
+            Your User ID: <span id="userIdDisplay" class="font-mono text-gray-700">Loading...</span>
+        </div>
+
+        <!-- Zoom Control -->
+        <div class="max-w-xl mx-auto mb-8 bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
+            <span class="text-gray-600 text-sm">Zoom:</span>
+            <input type="range" id="zoomSlider" min="0.5" max="2.5" value="1" step="0.1" class="zoom-slider flex-grow">
+            <span class="text-gray-600 text-sm" id="zoomValue">100%</span>
+        </div>
+
+        <!-- Timeline Container -->
+        <div id="timeline-container" class="relative bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
+            <!-- Timeline Line (dynamic width) -->
+            <div id="timeline-line"></div>
+            <!-- Book Markers and Year Markers will be injected here by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-pink-100 py-4 px-6 text-center text-pink-700 text-sm mt-8">
+        &copy; 2025 Important Flowers. All rights reserved.
+    </footer>
+
+    <!-- Book Details Modal -->
+    <div id="bookModal" class="modal-overlay hidden">
+        <div class="modal-content relative">
+            <button class="modal-close-btn" id="closeModal">&times;</button>
+            
+            <!-- View Mode -->
+            <div id="viewMode" class="flex flex-col md:flex-row gap-6">
+                <div class="md:w-1/3 flex-shrink-0">
+                    <img id="modalBookCover" src="" alt="Book Cover" class="w-full h-auto rounded-lg shadow-md mb-4">
+                </div>
+                <div class="md:w-2/3">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 id="modalBookTitle" class="text-3xl font-bold text-gray-900 mb-2"></h2>
+                            <p id="modalBookAuthor" class="text-xl text-gray-700 mb-2"></p>
+                            <p id="modalBookDate" class="text-gray-500 text-sm mb-4"></p>
+                        </div>
+                        <button id="editBookBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200 text-sm">
+                            Edit Book
+                        </button>
+                    </div>
+                    <p id="modalBookDescription" class="text-gray-700 mb-6 leading-relaxed"></p>
+
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Your Private Notes</h3>
+                    <textarea id="bookNotes" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[100px] text-gray-800" placeholder="Add your notes here..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Notes are saved automatically in your browser.</p>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="editMode" class="hidden">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Edit Book Information</h2>
+                <form id="editBookForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="editTitle" class="block text-sm font-medium text-gray-700 mb-2">Book Title</label>
+                            <input type="text" id="editTitle" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="editAuthor" class="block text-sm font-medium text-gray-700 mb-2">Author</label>
+                            <input type="text" id="editAuthor" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="editPublicationDate" class="block text-sm font-medium text-gray-700 mb-2">Publication Date</label>
+                        <input type="date" id="editPublicationDate" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    
+                    <div>
+                        <label for="editDescription" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="editDescription" rows="4" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 resize-y" required></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Book Cover</label>
+                        <div class="space-y-4">
+                            <!-- Cover Type Selection -->
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="editCoverType" value="upload" class="mr-2">
+                                    Upload Image
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editCoverType" value="url" class="mr-2">
+                                    Image URL
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editCoverType" value="text" class="mr-2">
+                                    Text Cover
+                                </label>
+                            </div>
+
+                            <!-- File Upload -->
+                            <div id="editFileUpload" class="hidden">
+                                <input type="file" id="editImageFile" accept="image/*" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF). Will be resized to 100x150px.</p>
+                                <p class="text-xs text-blue-600 mt-1">💡 In development mode, this creates a text cover with the filename.</p>
+                            </div>
+
+                            <!-- URL Input -->
+                            <div id="editUrlInput" class="hidden">
+                                <input type="url" id="editImageUrl" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="https://example.com/book-cover.jpg">
+                                <p class="text-xs text-gray-500 mt-1">Enter a URL for the book cover image.</p>
+                            </div>
+
+                            <!-- Text Cover Options -->
+                            <div id="editTextCover" class="hidden space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="editCoverText" class="block text-xs font-medium text-gray-700 mb-1">Cover Text</label>
+                                        <input type="text" id="editCoverText" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Book Title">
+                                    </div>
+                                    <div>
+                                        <label for="editCoverColor" class="block text-xs font-medium text-gray-700 mb-1">Background Color</label>
+                                        <input type="color" id="editCoverColor" value="#3B82F6" class="w-full h-10 border border-gray-300 rounded-md">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="editTextColor" class="block text-xs font-medium text-gray-700 mb-1">Text Color</label>
+                                    <input type="color" id="editTextColor" value="#FFFFFF" class="w-full h-10 border border-gray-300 rounded-md">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-4">
+                        <button type="button" id="deleteBookBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200 text-sm">
+                            Delete Book
+                        </button>
+                        <div class="flex space-x-4">
+                            <button type="button" id="cancelEditBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md transition-colors duration-200">
+                                Cancel
+                            </button>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors duration-200">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Book Modal -->
+    <div id="addBookModal" class="modal-overlay hidden">
+        <div class="modal-content relative">
+            <button class="modal-close-btn" id="closeAddModal">&times;</button>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Add New Book</h2>
+            <form id="addBookForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="addTitle" class="block text-sm font-medium text-gray-700 mb-2">Book Title *</label>
+                        <input type="text" id="addTitle" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="addAuthor" class="block text-sm font-medium text-gray-700 mb-2">Author *</label>
+                        <input type="text" id="addAuthor" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="addPublicationDate" class="block text-sm font-medium text-gray-700 mb-2">Publication Date *</label>
+                    <input type="date" id="addPublicationDate" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                
+                <div>
+                    <label for="addDescription" class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                    <textarea id="addDescription" rows="4" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 resize-y" required></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Book Cover</label>
+                    <div class="space-y-4">
+                        <!-- Cover Type Selection -->
+                        <div class="flex space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="addCoverType" value="upload" class="mr-2">
+                                Upload Image
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="addCoverType" value="url" class="mr-2">
+                                Image URL
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="addCoverType" value="text" class="mr-2">
+                                Text Cover
+                            </label>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div id="addFileUpload" class="hidden">
+                            <input type="file" id="addImageFile" accept="image/*" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF). Will be resized to 100x150px.</p>
+                            <p class="text-xs text-blue-600 mt-1">💡 In development mode, this creates a text cover with the filename.</p>
+                        </div>
+
+                        <!-- URL Input -->
+                        <div id="addUrlInput" class="hidden">
+                            <input type="url" id="addImageUrl" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="https://example.com/book-cover.jpg">
+                            <p class="text-xs text-gray-500 mt-1">Enter a URL for the book cover image.</p>
+                        </div>
+
+                        <!-- Text Cover Options -->
+                        <div id="addTextCover" class="hidden space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="addCoverText" class="block text-xs font-medium text-gray-700 mb-1">Cover Text</label>
+                                    <input type="text" id="addCoverText" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Book Title">
+                                </div>
+                                <div>
+                                    <label for="addCoverColor" class="block text-xs font-medium text-gray-700 mb-1">Background Color</label>
+                                    <input type="color" id="addCoverColor" value="#3B82F6" class="w-full h-10 border border-gray-300 rounded-md">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="addTextColor" class="block text-xs font-medium text-gray-700 mb-1">Text Color</label>
+                                <input type="color" id="addTextColor" value="#FFFFFF" class="w-full h-10 border border-gray-300 rounded-md">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" id="cancelAddBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors duration-200">
+                        Add Book
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+
+        // --- Firebase Configuration (Provided by Canvas Environment) ---
+        // For local development, create a Firebase project and paste your config here.
+        const localFirebaseConfig = {
+            apiKey: "AIzaSyBwR_TDaTrpZoyX7JxrgF64s0Vzo-tm9YI",
+            authDomain: "importantflowers-61b97.firebaseapp.com",
+            projectId: "importantflowers-61b97",
+            storageBucket: "importantflowers-61b97.appspot.com",
+            messagingSenderId: "1061671804234",
+            appId: "1:1061671804234:web:e66c9358961438283fb5b3",
+            measurementId: "G-ESVLWFN385"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Use the injected config if available, otherwise fall back to the local one.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : localFirebaseConfig;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
+
+        let currentUserId = null;
+        let books = []; // This will now be populated from Firestore
+        let isAuthReady = false; // Flag to indicate when auth state is known
+
+        // --- DOM Elements ---
+        const timelineContainer = document.getElementById('timeline-container');
+        const timelineLine = document.getElementById('timeline-line');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValueSpan = document.getElementById('zoomValue');
+        const bookModal = document.getElementById('bookModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        const modalBookCover = document.getElementById('modalBookCover');
+        const modalBookTitle = document.getElementById('modalBookTitle');
+        const modalBookAuthor = document.getElementById('modalBookAuthor');
+        const modalBookDate = document.getElementById('modalBookDate');
+        const modalBookDescription = document.getElementById('modalBookDescription');
+        const bookNotesTextarea = document.getElementById('bookNotes');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const editBookBtn = document.getElementById('editBookBtn');
+        const viewMode = document.getElementById('viewMode');
+        const editMode = document.getElementById('editMode');
+        const editBookForm = document.getElementById('editBookForm');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const editTitleInput = document.getElementById('editTitle');
+        const editAuthorInput = document.getElementById('editAuthor');
+        const editPublicationDateInput = document.getElementById('editPublicationDate');
+        const editDescriptionTextarea = document.getElementById('editDescription');
+        
+        // Edit form cover elements
+        const editFileUpload = document.getElementById('editFileUpload');
+        const editUrlInput = document.getElementById('editUrlInput');
+        const editTextCover = document.getElementById('editTextCover');
+        const editImageFile = document.getElementById('editImageFile');
+        const editImageUrlInput = document.getElementById('editImageUrl');
+        const editCoverText = document.getElementById('editCoverText');
+        const editCoverColor = document.getElementById('editCoverColor');
+        const editTextColor = document.getElementById('editTextColor');
+        
+        // Add New Book Modal Elements
+        const addNewBookBtn = document.getElementById('addNewBookBtn');
+        const addBookModal = document.getElementById('addBookModal');
+        const closeAddModal = document.getElementById('closeAddModal');
+        const addBookForm = document.getElementById('addBookForm');
+        const cancelAddBtn = document.getElementById('cancelAddBtn');
+        const addTitleInput = document.getElementById('addTitle');
+        const addAuthorInput = document.getElementById('addAuthor');
+        const addPublicationDateInput = document.getElementById('addPublicationDate');
+        const addDescriptionTextarea = document.getElementById('addDescription');
+        
+        // Add form cover elements
+        const addFileUpload = document.getElementById('addFileUpload');
+        const addUrlInput = document.getElementById('addUrlInput');
+        const addTextCover = document.getElementById('addTextCover');
+        const addImageFile = document.getElementById('addImageFile');
+        const addImageUrlInput = document.getElementById('addImageUrl');
+        const addCoverText = document.getElementById('addCoverText');
+        const addCoverColor = document.getElementById('addCoverColor');
+        const addTextColor = document.getElementById('addTextColor');
+        const deleteBookBtn = document.getElementById('deleteBookBtn');
+
+        // --- Configuration ---
+        const PX_PER_DAY_BASE = 2; // Base pixels per day for timeline scaling
+        const BOOK_WIDTH_BASE = 100; // Base width of book cover in pixels
+        const TIMELINE_HEIGHT = 484; // Adjusted to 484px (initial 384px + 100px)
+        const START_YEAR = 2025;
+        const END_YEAR = START_YEAR + 5; // Display 5 years out
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+        let currentZoom = parseFloat(zoomSlider.value);
+        let activeBookId = null; // To keep track of which book's notes are open
+
+        // --- Helper Functions ---
+
+        // Calculates the total number of days from a reference point (e.g., start of START_YEAR)
+        function getDaysSinceStart(dateString) {
+            const date = new Date(dateString);
+            const startDate = new Date(`${START_YEAR}-01-01T00:00:00Z`); // Use UTC to avoid timezone issues
+            return Math.floor((date - startDate) / MS_PER_DAY);
+        }
+
+        // Converts a pixel position on the timeline back to a date string
+        function getDateFromPosition(positionX) {
+            const daysOffset = positionX / (PX_PER_DAY_BASE * currentZoom);
+            const startDate = new Date(`${START_YEAR}-01-01T00:00:00Z`);
+            const newDate = new Date(startDate.getTime() + daysOffset * MS_PER_DAY);
+            return newDate.toISOString().slice(0, 10); // YYYY-MM-DD format
+        }
+
+        // Formats date for display
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+
+        // Loads notes from Local Storage for a given book ID
+        function loadNotes(bookId) {
+            return localStorage.getItem(`important_flowers_notes_${bookId}`) || '';
+        }
+
+        // Saves notes to Local Storage for a given book ID
+        function saveNotes(bookId, notes) {
+            localStorage.setItem(`important_flowers_notes_${bookId}`, notes);
+        }
+
+        // --- Firestore Operations ---
+
+        // Function to set up the initial book data if the collection is empty
+        async function initializeBooksIfEmpty() {
+            const booksCollectionRef = collection(db, `artifacts/${appId}/public/data/books`);
+            const snapshot = await getDocs(booksCollectionRef);
+            if (snapshot.empty) {
+                console.log("No books found in Firestore, initializing with mock data.");
+                const mockBooks = [
+                    { id: 'book-001', title: 'Chanel', author: 'Sofia Coppola', publicationDate: '2025-09-20', image: 'https://placehold.co/100x150/B8860B/FFFFFF?text=Chanel', description: 'The history of Chanel Couture, 1915–2025.' },
+                    { id: 'book-002', title: 'Miranda', author: 'Miranda', publicationDate: '2026-03-01', image: 'https://placehold.co/100x150/ADD8E6/00008B?text=Miranda', description: 'An exploration of avant-garde fashion, pushing the boundaries of textile art and wearable sculpture.' },
+                    { id: 'book-003', title: 'Marie Antoinette', author: 'Sophia Rossi', publicationDate: '2026-09-01', image: 'https://placehold.co/100x150/F0F8FF/8B0000?text=Marie+Antoinette', description: 'A visual biography of the legendary queen, focusing on her fashion and lifestyle.' },
+                    { id: 'book-004', title: 'Jow Szabo', author: 'Ethan Cole', publicationDate: '2026-10-01', image: 'https://placehold.co/100x150/DDA0DD/4B0082?text=Jow+Szabo', description: 'A retrospective of Jow Szabo\'s groundbreaking work in contemporary photography.' },
+                    { id: 'book-005', title: 'Anjelica', author: 'Olivia Blake', publicationDate: '2027-04-01', image: 'https://placehold.co/100x150/FFDAB9/A0522D?text=Anjelica', description: 'A captivating photographic series capturing the ethereal beauty of Anjelica in various artistic settings.' }
+                ];
+                for (const book of mockBooks) {
+                    await setDoc(doc(booksCollectionRef, book.id), book);
+                }
+                console.log("Mock data initialized.");
+            }
+        }
+
+        // Function to listen for real-time updates from Firestore
+        function listenForBooks() {
+            if (!currentUserId) {
+                console.log("User not authenticated yet, cannot listen for books.");
+                return;
+            }
+            const booksCollectionRef = collection(db, `artifacts/${appId}/public/data/books`);
+            onSnapshot(booksCollectionRef, (snapshot) => {
+                books = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort books by publication date to ensure correct rendering order
+                books.sort((a, b) => new Date(a.publicationDate) - new Date(b.publicationDate));
+                renderTimeline();
+                loadingOverlay.style.opacity = '0';
+                loadingOverlay.style.visibility = 'hidden';
+            }, (error) => {
+                console.error("Error fetching books: ", error);
+                loadingOverlay.style.opacity = '0';
+                loadingOverlay.style.visibility = 'hidden';
+            });
+        }
+
+        // Function to update a book's publication date in Firestore
+        async function updateBookPublicationDate(bookId, newDate) {
+            try {
+                const bookRef = doc(db, `artifacts/${appId}/public/data/books`, bookId);
+                await updateDoc(bookRef, { publicationDate: newDate });
+                console.log(`Book ${bookId} publication date updated to ${newDate}`);
+            } catch (error) {
+                console.error("Error updating book date: ", error);
+            }
+        }
+
+        // Function to update a book's complete information in Firestore
+        async function updateBookInfo(bookId, bookData) {
+            try {
+                const bookRef = doc(db, `artifacts/${appId}/public/data/books`, bookId);
+                await updateDoc(bookRef, bookData);
+                console.log(`Book ${bookId} updated successfully`);
+                return true;
+            } catch (error) {
+                console.error("Error updating book: ", error);
+                return false;
+            }
+        }
+
+        // Function to create a new book in Firestore
+        async function createNewBook(bookData) {
+            try {
+                const booksCollectionRef = collection(db, `artifacts/${appId}/public/data/books`);
+                const newBookRef = doc(booksCollectionRef);
+                const bookWithId = {
+                    id: newBookRef.id,
+                    ...bookData
+                };
+                await setDoc(newBookRef, bookWithId);
+                console.log(`New book created with ID: ${newBookRef.id}`);
+                return newBookRef.id;
+            } catch (error) {
+                console.error("Error creating new book: ", error);
+                return null;
+            }
+        }
+
+        // Function to delete a book from Firestore
+        async function deleteBook(bookId) {
+            try {
+                const bookRef = doc(db, `artifacts/${appId}/public/data/books`, bookId);
+                await deleteDoc(bookRef);
+                console.log(`Book ${bookId} deleted successfully`);
+                return true;
+            } catch (error) {
+                console.error("Error deleting book: ", error);
+                return false;
+            }
+        }
+
+        // Function to handle image upload (development-friendly)
+        async function uploadImageToStorage(file, bookId) {
+            // Check if we're in development mode (localhost)
+            const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (isDevelopment) {
+                console.log("Development mode detected - using text cover instead of upload");
+                // In development, skip upload and create a text cover
+                const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove file extension
+                const textCoverUrl = generateTextCoverURL(fileName, '#3B82F6', '#FFFFFF');
+                return textCoverUrl;
+            }
+            
+            // Production mode - attempt actual upload
+            try {
+                // Create a canvas to resize the image
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Set uniform size (100x150 for book covers)
+                canvas.width = 100;
+                canvas.height = 150;
+                
+                // Create an image element
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                // Convert canvas to blob and handle upload
+                return new Promise((resolve) => {
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0, 100, 150);
+                        canvas.toBlob(async (blob) => {
+                            try {
+                                const metadata = {
+                                    contentType: 'image/jpeg',
+                                    cacheControl: 'public, max-age=31536000',
+                                };
+                                
+                                const storageRef = ref(storage, `book-covers/${bookId}/${Date.now()}.jpg`);
+                                const snapshot = await uploadBytes(storageRef, blob, metadata);
+                                const downloadURL = await getDownloadURL(snapshot.ref);
+                                resolve(downloadURL);
+                            } catch (error) {
+                                console.error("Upload error details:", error);
+                                const fallbackUrl = generateTextCoverURL(file.name.replace(/\.[^/.]+$/, ""), '#3B82F6', '#FFFFFF');
+                                resolve(fallbackUrl);
+                            }
+                        }, 'image/jpeg', 0.8);
+                    };
+                    
+                    img.onerror = function() {
+                        console.error("Error loading image for resize");
+                        const fallbackUrl = generateTextCoverURL(file.name.replace(/\.[^/.]+$/, ""), '#3B82F6', '#FFFFFF');
+                        resolve(fallbackUrl);
+                    };
+                    
+                    img.src = URL.createObjectURL(file);
+                });
+            } catch (error) {
+                console.error("Error in upload process:", error);
+                return generateTextCoverURL(file.name.replace(/\.[^/.]+$/, ""), '#3B82F6', '#FFFFFF');
+            }
+        }
+
+        // Function to generate text cover URL
+        function generateTextCoverURL(text, bgColor, textColor) {
+            const encodedText = encodeURIComponent(text || 'Book Cover');
+            const bgHex = bgColor.replace('#', '');
+            const textHex = textColor.replace('#', '');
+            return `https://placehold.co/100x150/${bgHex}/${textHex}?text=${encodedText}`;
+        }
+
+        // --- Authentication ---
+        // This listener reacts to sign-in/sign-out events.
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // User is signed in.
+                if (currentUserId === user.uid) return; // Avoid re-running if already initialized
+
+                currentUserId = user.uid;
+                userIdDisplay.textContent = currentUserId;
+                isAuthReady = true;
+                console.log("Auth ready, user ID:", currentUserId);
+
+                // Once authenticated, initialize data and start listening
+                await initializeBooksIfEmpty();
+                listenForBooks();
+            } else {
+                // User is signed out. Attempt to sign in.
+                // The onAuthStateChanged listener will be called again upon success.
+                console.log("No user signed in. Attempting to sign in...");
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Error during sign-in:", error);
+                    userIdDisplay.textContent = "Authentication Failed";
+                    // Hide loading overlay on auth failure to un-stick the page
+                    loadingOverlay.style.opacity = '0';
+                    loadingOverlay.style.visibility = 'hidden';
+                }
+            }
+        });
+
+
+        // --- Rendering Functions ---
+
+        function renderTimeline() {
+            // Clear existing markers and labels
+            timelineContainer.querySelectorAll('.book-marker, .year-marker, .year-label').forEach(el => el.remove());
+
+            // Set timeline container height dynamically from JS constant
+            timelineContainer.style.height = `${TIMELINE_HEIGHT}px`;
+
+            const totalDaysInPeriod = getDaysSinceStart(`${END_YEAR}-12-31`) + 1;
+            const timelineWidth = totalDaysInPeriod * PX_PER_DAY_BASE * currentZoom;
+            timelineLine.style.width = `${timelineWidth}px`;
+
+            // Render Year Markers and Labels
+            for (let year = START_YEAR; year <= END_YEAR; year++) {
+                const daysOffset = getDaysSinceStart(`${year}-01-01`);
+                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom;
+
+                // Year Marker
+                const yearMarker = document.createElement('div');
+                yearMarker.className = 'year-marker';
+                yearMarker.style.left = `${positionX}px`;
+                timelineContainer.appendChild(yearMarker);
+
+                // Year Label
+                const yearLabel = document.createElement('div');
+                yearLabel.className = 'year-label';
+                yearLabel.textContent = year;
+                yearLabel.style.left = `${positionX}px`;
+                timelineContainer.appendChild(yearLabel);
+            }
+
+            // Render Book Markers
+            books.forEach((book, index) => {
+                const daysOffset = getDaysSinceStart(book.publicationDate);
+                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom;
+
+                const bookMarker = document.createElement('div');
+                // Alternate positioning: top-aligned for even index, bottom-aligned for odd index
+                bookMarker.className = `book-marker ${index % 2 === 0 ? 'top-aligned' : 'bottom-aligned'}`;
+                bookMarker.style.left = `${positionX}px`;
+                bookMarker.style.width = `${BOOK_WIDTH_BASE * currentZoom}px`;
+                bookMarker.style.height = `${BOOK_WIDTH_BASE * 1.5 * currentZoom}px`; // Maintain aspect ratio
+
+                bookMarker.dataset.bookId = book.id; // Store book ID for easy lookup
+                bookMarker.dataset.originalLeft = positionX; // Store original position for drag calculations
+
+                const img = document.createElement('img');
+                img.src = book.image;
+                img.alt = book.title;
+                img.onerror = function() {
+                    // Fallback to a text placeholder if image fails to load
+                    this.onerror = null; // Prevent infinite loop
+                    const placeholderDiv = document.createElement('div');
+                    placeholderDiv.className = 'w-full h-full bg-gray-200 flex items-center justify-center text-center text-gray-500 text-xs p-2';
+                    placeholderDiv.textContent = book.title || 'No Image';
+                    bookMarker.innerHTML = ''; // Clear img tag
+                    bookMarker.appendChild(placeholderDiv);
+                };
+
+                bookMarker.appendChild(img);
+                timelineContainer.appendChild(bookMarker);
+            });
+        }
+
+        // --- Event Listeners ---
+
+        // Zoom Slider
+        zoomSlider.addEventListener('input', (event) => {
+            currentZoom = parseFloat(event.target.value);
+            zoomValueSpan.textContent = `${Math.round(currentZoom * 100)}%`;
+            renderTimeline(); // Re-render to apply new zoom level
+        });
+
+        // Book Marker Click (for modal)
+        timelineContainer.addEventListener('click', (event) => {
+            // Only open modal if not dragging
+            if (!isDraggingBook) { // Check isDraggingBook instead of isDragging
+                const bookMarker = event.target.closest('.book-marker');
+                if (bookMarker) {
+                    const bookId = bookMarker.dataset.bookId;
+                    const book = books.find(b => b.id === bookId);
+
+                    if (book) {
+                        activeBookId = book.id; // Set active book ID
+                        modalBookCover.src = book.image;
+                        modalBookCover.alt = book.title;
+                        modalBookTitle.textContent = book.title;
+                        modalBookAuthor.textContent = `By ${book.author}`;
+                        modalBookDate.textContent = `Publication: ${formatDate(book.publicationDate)}`;
+                        modalBookDescription.textContent = book.description;
+                        bookNotesTextarea.value = loadNotes(book.id); // Load notes
+
+                        bookModal.classList.add('open');
+                        bookModal.classList.remove('hidden'); // Show modal
+                    }
+                }
+            }
+        });
+
+        // Close Modal
+        closeModalBtn.addEventListener('click', () => {
+            // If in edit mode, switch back to view mode first
+            if (!editMode.classList.contains('hidden')) {
+                viewMode.classList.remove('hidden');
+                editMode.classList.add('hidden');
+                return;
+            }
+            
+            bookModal.classList.remove('open');
+            // Use setTimeout to allow transition to complete before hiding
+            setTimeout(() => {
+                bookModal.classList.add('hidden');
+                activeBookId = null; // Clear active book ID
+            }, 300);
+        });
+
+        // Save notes automatically on input (debounced for performance)
+        let notesSaveTimeout;
+        bookNotesTextarea.addEventListener('input', () => {
+            clearTimeout(notesSaveTimeout);
+            notesSaveTimeout = setTimeout(() => {
+                if (activeBookId) {
+                    saveNotes(activeBookId, bookNotesTextarea.value);
+                    console.log(`Notes saved for ${activeBookId}`);
+                }
+            }, 500); // Save after 500ms of no typing
+        });
+
+        // Allow click outside modal to close it
+        bookModal.addEventListener('click', (event) => {
+            if (event.target === bookModal) {
+                closeModalBtn.click(); // Simulate click on close button
+            }
+        });
+
+        // Keyboard accessibility for closing modal (Escape key)
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && bookModal.classList.contains('open')) {
+                closeModalBtn.click();
+            }
+        });
+
+        // --- Panning Functionality (Drag to Scroll) ---
+        let isPanning = false;
+        let panStartX;
+        let panScrollLeft;
+
+        timelineContainer.addEventListener('mousedown', (e) => {
+            // Only start panning if not clicking on a book marker
+            if (!e.target.closest('.book-marker')) {
+                isPanning = true;
+                timelineContainer.classList.add('cursor-grabbing');
+                panStartX = e.pageX - timelineContainer.offsetLeft;
+                panScrollLeft = timelineContainer.scrollLeft;
+            }
+        });
+
+        timelineContainer.addEventListener('mouseleave', () => {
+            isPanning = false;
+            timelineContainer.classList.remove('cursor-grabbing');
+        });
+
+        timelineContainer.addEventListener('mouseup', () => {
+            isPanning = false;
+            timelineContainer.classList.remove('cursor-grabbing');
+        });
+
+        timelineContainer.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            e.preventDefault();
+            const x = e.pageX - timelineContainer.offsetLeft;
+            const walk = (x - panStartX) * 1.5; // Adjust scroll speed
+            timelineContainer.scrollLeft = panScrollLeft - walk;
+        });
+
+        // Touch events for mobile panning
+        timelineContainer.addEventListener('touchstart', (e) => {
+            if (!e.target.closest('.book-marker')) {
+                isPanning = true;
+                panStartX = e.touches[0].pageX - timelineContainer.offsetLeft;
+                panScrollLeft = timelineContainer.scrollLeft;
+            }
+        });
+
+        timelineContainer.addEventListener('touchend', () => {
+            isPanning = false;
+        });
+
+        timelineContainer.addEventListener('touchmove', (e) => {
+            if (!isPanning) return;
+            e.preventDefault();
+            const x = e.touches[0].pageX - timelineContainer.offsetLeft;
+            const walk = (x - panStartX) * 1.5;
+            timelineContainer.scrollLeft = panScrollLeft - walk;
+        });
+
+        // --- Draggable Book Functionality ---
+        let draggedBook = null;
+        let startDragX;
+        let initialBookLeft;
+        let isDraggingBook = false; // Flag to differentiate between dragging book and panning timeline
+
+        timelineContainer.addEventListener('mousedown', (e) => {
+            const marker = e.target.closest('.book-marker');
+            if (marker) {
+                isDraggingBook = true;
+                draggedBook = marker;
+                draggedBook.classList.add('dragging');
+                startDragX = e.clientX;
+                initialBookLeft = parseFloat(draggedBook.style.left);
+
+                // Prevent timeline panning when dragging a book
+                e.stopPropagation();
+            }
+        });
+
+        timelineContainer.addEventListener('mousemove', (e) => {
+            if (!isDraggingBook || !draggedBook) return;
+            e.preventDefault(); // Prevent text selection during drag
+
+            const currentX = e.clientX;
+            const deltaX = currentX - startDragX;
+            let newLeft = initialBookLeft + deltaX;
+
+            // Constrain dragging within the timeline width
+            const minLeft = 0;
+            const maxLeft = timelineLine.offsetWidth; // Use the actual width of the timeline line
+            newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+
+            draggedBook.style.left = `${newLeft}px`;
+        });
+
+        timelineContainer.addEventListener('mouseup', (e) => {
+            if (isDraggingBook && draggedBook) {
+                isDraggingBook = false;
+                draggedBook.classList.remove('dragging');
+
+                const newPositionX = parseFloat(draggedBook.style.left);
+                const newPublicationDate = getDateFromPosition(newPositionX);
+                const bookId = draggedBook.dataset.bookId;
+
+                // Update the book in Firestore
+                updateBookPublicationDate(bookId, newPublicationDate);
+
+                draggedBook = null; // Clear dragged book
+            }
+        });
+
+        // Touch events for draggable books
+        timelineContainer.addEventListener('touchstart', (e) => {
+            const marker = e.target.closest('.book-marker');
+            if (marker) {
+                isDraggingBook = true;
+                draggedBook = marker;
+                draggedBook.classList.add('dragging');
+                startDragX = e.touches[0].clientX;
+                initialBookLeft = parseFloat(draggedBook.style.left);
+
+                e.stopPropagation(); // Prevent timeline panning
+            }
+        });
+
+        timelineContainer.addEventListener('touchmove', (e) => {
+            if (!isDraggingBook || !draggedBook) return;
+            e.preventDefault();
+
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - startDragX;
+            let newLeft = initialBookLeft + deltaX;
+
+            const minLeft = 0;
+            const maxLeft = timelineLine.offsetWidth;
+            newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+
+            draggedBook.style.left = `${newLeft}px`;
+        });
+
+        timelineContainer.addEventListener('touchend', (e) => {
+            if (isDraggingBook && draggedBook) {
+                isDraggingBook = false;
+                draggedBook.classList.remove('dragging');
+
+                const newPositionX = parseFloat(draggedBook.style.left);
+                const newPublicationDate = getDateFromPosition(newPositionX);
+                const bookId = draggedBook.dataset.bookId;
+
+                updateBookPublicationDate(bookId, newPublicationDate);
+
+                draggedBook = null;
+            }
+        });
+
+                 // --- Edit Mode Toggle ---
+         editBookBtn.addEventListener('click', () => {
+             viewMode.classList.add('hidden');
+             editMode.classList.remove('hidden');
+
+             const book = books.find(b => b.id === activeBookId);
+             if (book) {
+                 editTitleInput.value = book.title;
+                 editAuthorInput.value = book.author;
+                 editPublicationDateInput.value = book.publicationDate;
+                 editDescriptionTextarea.value = book.description;
+                 editImageUrlInput.value = book.image;
+                 
+                 // Set default cover type to URL if it's a URL, otherwise text
+                 if (book.image && book.image.startsWith('http')) {
+                     document.querySelector('input[name="editCoverType"][value="url"]').checked = true;
+                     editUrlInput.classList.remove('hidden');
+                 } else {
+                     document.querySelector('input[name="editCoverType"][value="text"]').checked = true;
+                     editTextCover.classList.remove('hidden');
+                 }
+             }
+         });
+
+         // Edit form cover type selection
+         document.querySelectorAll('input[name="editCoverType"]').forEach(radio => {
+             radio.addEventListener('change', (e) => {
+                 // Hide all cover input sections
+                 editFileUpload.classList.add('hidden');
+                 editUrlInput.classList.add('hidden');
+                 editTextCover.classList.add('hidden');
+                 
+                 // Show the selected section
+                 switch(e.target.value) {
+                     case 'upload':
+                         editFileUpload.classList.remove('hidden');
+                         break;
+                     case 'url':
+                         editUrlInput.classList.remove('hidden');
+                         break;
+                     case 'text':
+                         editTextCover.classList.remove('hidden');
+                         break;
+                 }
+             });
+         });
+
+        cancelEditBtn.addEventListener('click', () => {
+            viewMode.classList.remove('hidden');
+            editMode.classList.add('hidden');
+            // Revert to original book data if available
+            const book = books.find(b => b.id === activeBookId);
+            if (book) {
+                modalBookCover.src = book.image;
+                modalBookCover.alt = book.title;
+                modalBookTitle.textContent = book.title;
+                modalBookAuthor.textContent = `By ${book.author}`;
+                modalBookDate.textContent = `Publication: ${formatDate(book.publicationDate)}`;
+                modalBookDescription.textContent = book.description;
+                bookNotesTextarea.value = loadNotes(book.id);
+            }
+        });
+
+                          editBookForm.addEventListener('submit', async (event) => {
+             event.preventDefault();
+             const bookId = activeBookId;
+             const newTitle = editTitleInput.value.trim();
+             const newAuthor = editAuthorInput.value.trim();
+             const newPublicationDate = editPublicationDateInput.value;
+             const newDescription = editDescriptionTextarea.value.trim();
+             
+             // Validate required fields
+             if (!newTitle || !newAuthor || !newPublicationDate || !newDescription) {
+                 alert("Please fill in all required fields.");
+                 return;
+             }
+
+             let newImageUrl = '';
+             const coverType = document.querySelector('input[name="editCoverType"]:checked').value;
+
+             try {
+                 // Handle different cover types
+                 switch(coverType) {
+                     case 'upload':
+                         const file = editImageFile.files[0];
+                         if (!file) {
+                             alert("Please select an image file to upload.");
+                             return;
+                         }
+                         
+                         // Show loading state
+                         const submitBtn = event.target.querySelector('button[type="submit"]');
+                         const originalText = submitBtn.textContent;
+                         submitBtn.textContent = 'Uploading...';
+                         submitBtn.disabled = true;
+                         
+                         // Add timeout to prevent infinite loading
+                         const uploadTimeout = setTimeout(() => {
+                             submitBtn.textContent = originalText;
+                             submitBtn.disabled = false;
+                             newImageUrl = generateTextCoverURL(newTitle, '#3B82F6', '#FFFFFF');
+                             console.log("Upload timed out, using text cover");
+                         }, 10000); // 10 second timeout
+                         
+                         newImageUrl = await uploadImageToStorage(file, bookId);
+                         clearTimeout(uploadTimeout);
+                         
+                         if (newImageUrl.includes('placehold.co')) {
+                             console.log("Using fallback text cover due to upload issues");
+                         }
+                         submitBtn.textContent = originalText;
+                         submitBtn.disabled = false;
+                         break;
+                     
+                     case 'url':
+                         newImageUrl = editImageUrlInput.value.trim();
+                         if (!newImageUrl) {
+                             alert("Please enter an image URL.");
+                             return;
+                         }
+                         break;
+                     
+                     case 'text':
+                         const coverText = editCoverText.value.trim() || newTitle;
+                         const bgColor = editCoverColor.value;
+                         const textColor = editTextColor.value;
+                         newImageUrl = generateTextCoverURL(coverText, bgColor, textColor);
+                         break;
+                 }
+
+                 const bookData = {
+                     title: newTitle,
+                     author: newAuthor,
+                     publicationDate: newPublicationDate,
+                     description: newDescription,
+                     image: newImageUrl
+                 };
+
+                 const success = await updateBookInfo(bookId, bookData);
+                 
+                 if (success) {
+                     // Switch back to view mode
+                     viewMode.classList.remove('hidden');
+                     editMode.classList.add('hidden');
+                     
+                     // Update modal display
+                     modalBookCover.src = newImageUrl;
+                     modalBookCover.alt = newTitle;
+                     modalBookTitle.textContent = newTitle;
+                     modalBookAuthor.textContent = `By ${newAuthor}`;
+                     modalBookDate.textContent = `Publication: ${formatDate(newPublicationDate)}`;
+                     modalBookDescription.textContent = newDescription;
+                     bookNotesTextarea.value = loadNotes(bookId); // Reload notes after update
+                 } else {
+                     alert("Failed to update book. Please try again.");
+                 }
+             } catch (error) {
+                 console.error("Error updating book: ", error);
+                 alert("Failed to update book. Please try again.");
+             }
+         });
+
+         // --- Delete Book Functionality ---
+         deleteBookBtn.addEventListener('click', async () => {
+             if (!activeBookId) return;
+             
+             const book = books.find(b => b.id === activeBookId);
+             if (!book) return;
+             
+             const confirmDelete = confirm(`Are you sure you want to delete "${book.title}"? This action cannot be undone.`);
+             if (!confirmDelete) return;
+             
+             const success = await deleteBook(activeBookId);
+             if (success) {
+                 // Close modal
+                 closeModalBtn.click();
+                 alert("Book deleted successfully!");
+             } else {
+                 alert("Failed to delete book. Please try again.");
+             }
+         });
+
+         // --- Add New Book Functionality ---
+         addNewBookBtn.addEventListener('click', () => {
+             // Set default date to today
+             const today = new Date().toISOString().split('T')[0];
+             addPublicationDateInput.value = today;
+             
+             // Clear form
+             addBookForm.reset();
+             addPublicationDateInput.value = today;
+             
+             // Set default cover type to text
+             document.querySelector('input[name="addCoverType"][value="text"]').checked = true;
+             addTextCover.classList.remove('hidden');
+             
+             // Show modal
+             addBookModal.classList.add('open');
+             addBookModal.classList.remove('hidden');
+         });
+
+         // Add form cover type selection
+         document.querySelectorAll('input[name="addCoverType"]').forEach(radio => {
+             radio.addEventListener('change', (e) => {
+                 // Hide all cover input sections
+                 addFileUpload.classList.add('hidden');
+                 addUrlInput.classList.add('hidden');
+                 addTextCover.classList.add('hidden');
+                 
+                 // Show the selected section
+                 switch(e.target.value) {
+                     case 'upload':
+                         addFileUpload.classList.remove('hidden');
+                         break;
+                     case 'url':
+                         addUrlInput.classList.remove('hidden');
+                         break;
+                     case 'text':
+                         addTextCover.classList.remove('hidden');
+                         break;
+                 }
+             });
+         });
+
+         closeAddModal.addEventListener('click', () => {
+             addBookModal.classList.remove('open');
+             setTimeout(() => {
+                 addBookModal.classList.add('hidden');
+             }, 300);
+         });
+
+         cancelAddBtn.addEventListener('click', () => {
+             closeAddModal.click();
+         });
+
+         addBookForm.addEventListener('submit', async (event) => {
+             event.preventDefault();
+             
+             const title = addTitleInput.value.trim();
+             const author = addAuthorInput.value.trim();
+             const publicationDate = addPublicationDateInput.value;
+             const description = addDescriptionTextarea.value.trim();
+             
+             // Validate required fields
+             if (!title || !author || !publicationDate || !description) {
+                 alert("Please fill in all required fields.");
+                 return;
+             }
+
+             let imageUrl = '';
+             const coverType = document.querySelector('input[name="addCoverType"]:checked').value;
+
+             try {
+                 // Handle different cover types
+                 switch(coverType) {
+                     case 'upload':
+                         const file = addImageFile.files[0];
+                         if (!file) {
+                             alert("Please select an image file to upload.");
+                             return;
+                         }
+                         
+                         // Show loading state
+                         const addSubmitBtn = event.target.querySelector('button[type="submit"]');
+                         const addOriginalText = addSubmitBtn.textContent;
+                         addSubmitBtn.textContent = 'Uploading...';
+                         addSubmitBtn.disabled = true;
+                         
+                         // Add timeout to prevent infinite loading
+                         const addUploadTimeout = setTimeout(() => {
+                             addSubmitBtn.textContent = addOriginalText;
+                             addSubmitBtn.disabled = false;
+                             imageUrl = generateTextCoverURL(title, '#3B82F6', '#FFFFFF');
+                             console.log("Upload timed out, using text cover");
+                         }, 10000); // 10 second timeout
+                         
+                         // Create a temporary book ID for upload
+                         const tempBookId = `temp-${Date.now()}`;
+                         imageUrl = await uploadImageToStorage(file, tempBookId);
+                         clearTimeout(addUploadTimeout);
+                         
+                         if (imageUrl.includes('placehold.co')) {
+                             console.log("Using fallback text cover due to upload issues");
+                         }
+                         addSubmitBtn.textContent = addOriginalText;
+                         addSubmitBtn.disabled = false;
+                         break;
+                     
+                     case 'url':
+                         imageUrl = addImageUrlInput.value.trim();
+                         if (!imageUrl) {
+                             alert("Please enter an image URL.");
+                             return;
+                         }
+                         break;
+                     
+                     case 'text':
+                         const coverText = addCoverText.value.trim() || title;
+                         const bgColor = addCoverColor.value;
+                         const textColor = addTextColor.value;
+                         imageUrl = generateTextCoverURL(coverText, bgColor, textColor);
+                         break;
+                 }
+
+                 const bookData = {
+                     title,
+                     author,
+                     publicationDate,
+                     description,
+                     image: imageUrl
+                 };
+
+                 const newBookId = await createNewBook(bookData);
+                 
+                 if (newBookId) {
+                     // Close modal
+                     closeAddModal.click();
+                     
+                     // Show success message
+                     alert("Book added successfully!");
+                 } else {
+                     alert("Failed to add book. Please try again.");
+                 }
+             } catch (error) {
+                 console.error("Error adding book: ", error);
+                 alert("Failed to add book. Please try again.");
+             }
+         });
+
+         // Allow click outside add modal to close it
+         addBookModal.addEventListener('click', (event) => {
+             if (event.target === addBookModal) {
+                 closeAddModal.click();
+             }
+         });
+
+         // --- Initial Render on Load ---
+         // The initial render is now triggered after authentication and data loading.
+         // The window.onload is no longer needed to trigger renderTimeline directly.
+
+    </script>
+</body>
+</html>

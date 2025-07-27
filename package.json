@@ -1,0 +1,12 @@
+{
+  "name": "important-flowers",
+  "version": "1.0.0",
+  "description": "Important Flowers Publication Schedule Overview",
+  "main": "ImportantFlowers.html",
+  "scripts": {
+    "start": "echo 'Static site - serve ImportantFlowers.html'"
+  },
+  "keywords": ["publication", "schedule", "firebase", "timeline"],
+  "author": "Important Flowers",
+  "license": "MIT"
+} 
