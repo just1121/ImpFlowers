@@ -41,6 +41,7 @@
             overflow-x: auto; /* Allows horizontal scrolling */
             padding-bottom: 20px; /* Space for scrollbar */
             padding-top: 40px; /* Extra space for year labels */
+            padding-left: 60px; /* Extra space for year labels on the left */
             cursor: grab;
             user-select: none;
             height: 484px; /* 384px (initial h-96) + 100px */
@@ -51,9 +52,9 @@
             background-color: #e0e0e0;
             position: absolute;
             top: 50%;
-            left: 0;
+            left: 60px; /* Account for the new left padding */
             transform: translateY(-50%);
-            width: 100%; /* Will be dynamically adjusted by JS based on zoom */
+            width: calc(100% - 60px); /* Adjust width to account for left padding */
         }
 
         .book-marker {
@@ -117,6 +118,8 @@
             color: #333;
             z-index: 1;
             white-space: nowrap; /* Prevent text wrapping */
+            min-width: 60px; /* Ensure minimum width for year labels */
+            text-align: center; /* Center the text */
         }
 
         /* Modal specific styles */
@@ -377,7 +380,7 @@
                             <div id="editFileUpload" class="hidden">
                                 <input type="file" id="editImageFile" accept="image/*" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                                 <p class="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF). Will be resized to 100x150px.</p>
-                                <p class="text-xs text-blue-600 mt-1">💡 In development mode, this creates a text cover with the filename.</p>
+                                <p class="text-xs text-blue-600 mt-1">💡 Uploads to Firebase Storage. Falls back to text cover if needed.</p>
                             </div>
 
                             <!-- URL Input -->
@@ -474,7 +477,7 @@
                         <div id="addFileUpload" class="hidden">
                             <input type="file" id="addImageFile" accept="image/*" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                             <p class="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF). Will be resized to 100x150px.</p>
-                            <p class="text-xs text-blue-600 mt-1">💡 In development mode, this creates a text cover with the filename.</p>
+                            <p class="text-xs text-blue-600 mt-1">💡 Uploads to Firebase Storage. Falls back to text cover if needed.</p>
                         </div>
 
                         <!-- URL Input -->
@@ -768,6 +771,9 @@
                 return textCoverUrl;
             }
             
+            // For production, try upload but fallback gracefully on CORS errors
+            console.log("Production mode - attempting Firebase Storage upload");
+            
             // Production mode - attempt actual upload
             try {
                 // Create a canvas to resize the image
@@ -799,6 +805,7 @@
                                 resolve(downloadURL);
                             } catch (error) {
                                 console.error("Upload error details:", error);
+                                console.log("CORS or upload error detected - using text cover fallback");
                                 const fallbackUrl = generateTextCoverURL(file.name.replace(/\.[^/.]+$/, ""), '#3B82F6', '#FFFFFF');
                                 resolve(fallbackUrl);
                             }
@@ -879,7 +886,7 @@
             // Render Year Markers and Labels
             for (let year = START_YEAR; year <= END_YEAR; year++) {
                 const daysOffset = getDaysSinceStart(`${year}-01-01`);
-                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom;
+                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom + 60; // Add 60px for left padding
 
                 // Year Marker
                 const yearMarker = document.createElement('div');
@@ -898,7 +905,7 @@
             // Render Book Markers
             books.forEach((book, index) => {
                 const daysOffset = getDaysSinceStart(book.publicationDate);
-                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom;
+                const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom + 60; // Add 60px for left padding
 
                 const bookMarker = document.createElement('div');
                 // Alternate positioning: top-aligned for even index, bottom-aligned for odd index
@@ -1089,8 +1096,8 @@
             let newLeft = initialBookLeft + deltaX;
 
             // Constrain dragging within the timeline width
-            const minLeft = 0;
-            const maxLeft = timelineLine.offsetWidth; // Use the actual width of the timeline line
+            const minLeft = 60; // Account for left padding
+            const maxLeft = timelineLine.offsetWidth + 60; // Use the actual width of the timeline line plus padding
             newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
 
             draggedBook.style.left = `${newLeft}px`;
@@ -1134,8 +1141,8 @@
             const deltaX = currentX - startDragX;
             let newLeft = initialBookLeft + deltaX;
 
-            const minLeft = 0;
-            const maxLeft = timelineLine.offsetWidth;
+            const minLeft = 60; // Account for left padding
+            const maxLeft = timelineLine.offsetWidth + 60; // Use the actual width of the timeline line plus padding
             newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
 
             draggedBook.style.left = `${newLeft}px`;
