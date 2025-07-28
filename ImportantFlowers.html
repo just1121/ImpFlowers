@@ -85,6 +85,32 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
 
+        .book-marker {
+            position: relative;
+        }
+
+        .book-marker::after {
+            content: "Double-click to move row";
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .book-marker:hover::after {
+            opacity: 1;
+        }
+
         .book-marker.dragging {
             cursor: grabbing;
             z-index: 10; /* Bring dragged item to front */
@@ -932,6 +958,7 @@
 
                 bookMarker.dataset.bookId = book.id; // Store book ID for easy lookup
                 bookMarker.dataset.originalLeft = positionX; // Store original position for drag calculations
+                bookMarker.dataset.row = index % 2 === 0 ? 'top' : 'bottom'; // Store current row
 
                 const img = document.createElement('img');
                 img.src = book.image;
@@ -985,6 +1012,23 @@
                         bookModal.classList.remove('hidden'); // Show modal
                     }
                 }
+            }
+        });
+
+        // Book Marker Double-Click (for row toggle)
+        timelineContainer.addEventListener('dblclick', (event) => {
+            const bookMarker = event.target.closest('.book-marker');
+            if (bookMarker && !isDraggingBook) {
+                const bookId = bookMarker.dataset.bookId;
+                const currentRow = bookMarker.dataset.row;
+                const newRow = currentRow === 'top' ? 'bottom' : 'top';
+                
+                // Update the book marker's row
+                bookMarker.dataset.row = newRow;
+                bookMarker.classList.remove('top-aligned', 'bottom-aligned');
+                bookMarker.classList.add(newRow === 'top' ? 'top-aligned' : 'bottom-aligned');
+                
+                console.log(`Moved book ${bookId} from ${currentRow} to ${newRow} row`);
             }
         });
 
