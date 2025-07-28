@@ -59,8 +59,8 @@
 
         .book-marker {
             position: absolute;
-            width: 100px; /* Base width for book cover */
-            height: 150px; /* Base height for book cover */
+            width: 150px; /* Increased width for book cover */
+            height: 225px; /* Increased height for book cover */
             cursor: grab; /* Changed to grab for draggable */
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             border-radius: 8px; /* Rounded corners for book covers */
@@ -617,7 +617,7 @@
 
         // --- Configuration ---
         const PX_PER_DAY_BASE = 2; // Base pixels per day for timeline scaling
-        const BOOK_WIDTH_BASE = 100; // Base width of book cover in pixels
+        const BOOK_WIDTH_BASE = 150; // Base width of book cover in pixels
         const TIMELINE_HEIGHT = 484; // Adjusted to 484px (initial 384px + 100px)
         const START_YEAR = 2025;
         const END_YEAR = START_YEAR + 5; // Display 5 years out
@@ -779,9 +779,9 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Set uniform size (100x150 for book covers)
-                canvas.width = 100;
-                canvas.height = 150;
+                // Set uniform size (150x225 for book covers)
+                canvas.width = 150;
+                canvas.height = 225;
                 
                 // Create an image element
                 const img = new Image();
@@ -790,7 +790,7 @@
                 // Convert canvas to blob and handle upload
                 return new Promise((resolve) => {
                     img.onload = function() {
-                        ctx.drawImage(img, 0, 0, 100, 150);
+                        ctx.drawImage(img, 0, 0, 150, 225);
                         canvas.toBlob(async (blob) => {
                             try {
                                 const metadata = {
