@@ -868,12 +868,30 @@
             }
         }
 
-        // Function to generate text cover URL
+        // Function to generate text cover URL with larger text
         function generateTextCoverURL(text, bgColor, textColor) {
-            const encodedText = encodeURIComponent(text || 'Book Cover');
-            const bgHex = bgColor.replace('#', '');
-            const textHex = textColor.replace('#', '');
-            return `https://placehold.co/100x150/${bgHex}/${textHex}?text=${encodedText}`;
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 150;
+            const ctx = canvas.getContext('2d');
+            
+            // Fill background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, 100, 150);
+            
+            // Set text properties
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Use larger font size
+            const fontSize = Math.min(16, Math.max(10, 100 / (text.length * 0.6)));
+            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            
+            // Draw text
+            ctx.fillText(text || 'Book Cover', 50, 75);
+            
+            return canvas.toDataURL('image/png');
         }
 
         // --- Authentication ---
