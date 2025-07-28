@@ -70,13 +70,8 @@
             z-index: 5; /* Ensure books are above timeline line */
         }
 
-        .book-marker.top-aligned {
-            top: 25%; /* Position above the line */
-            transform: translate(-50%, -50%);
-        }
-
-        .book-marker.bottom-aligned {
-            top: 75%; /* Position below the line */
+        .book-marker {
+            top: 50%; /* Position on the center line */
             transform: translate(-50%, -50%);
         }
 
@@ -85,31 +80,7 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .book-marker {
-            position: relative;
-        }
 
-        .book-marker::after {
-            content: "Double-click to move row";
-            position: absolute;
-            bottom: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 20;
-        }
-
-        .book-marker:hover::after {
-            opacity: 1;
-        }
 
         .book-marker.dragging {
             cursor: grabbing;
@@ -303,9 +274,9 @@
         </div>
 
         <!-- Zoom Control -->
-        <div class="max-w-xl mx-auto mb-8 bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
+        <div class="w-fit mx-auto mb-8 bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
             <span class="text-gray-600 text-sm">Zoom:</span>
-                            <input type="range" id="zoomSlider" min="0.5" max="1.4" value="1" step="0.1" class="zoom-slider w-32">
+            <input type="range" id="zoomSlider" min="0.5" max="1.4" value="1" step="0.1" class="zoom-slider w-32">
             <span class="text-gray-600 text-sm" id="zoomValue">100%</span>
         </div>
 
@@ -968,15 +939,13 @@
                 const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom + 60; // Add 60px for left padding
 
                 const bookMarker = document.createElement('div');
-                // Alternate positioning: top-aligned for even index, bottom-aligned for odd index
-                bookMarker.className = `book-marker ${index % 2 === 0 ? 'top-aligned' : 'bottom-aligned'}`;
+                bookMarker.className = 'book-marker';
                 bookMarker.style.left = `${positionX}px`;
                 bookMarker.style.width = `${BOOK_WIDTH_BASE * currentZoom}px`;
                 bookMarker.style.height = `${BOOK_WIDTH_BASE * 1.5 * currentZoom}px`; // Maintain aspect ratio
 
                 bookMarker.dataset.bookId = book.id; // Store book ID for easy lookup
                 bookMarker.dataset.originalLeft = positionX; // Store original position for drag calculations
-                bookMarker.dataset.row = index % 2 === 0 ? 'top' : 'bottom'; // Store current row
 
                 const img = document.createElement('img');
                 img.src = book.image;
@@ -1033,22 +1002,7 @@
             }
         });
 
-        // Book Marker Double-Click (for row toggle)
-        timelineContainer.addEventListener('dblclick', (event) => {
-            const bookMarker = event.target.closest('.book-marker');
-            if (bookMarker && !isDraggingBook) {
-                const bookId = bookMarker.dataset.bookId;
-                const currentRow = bookMarker.dataset.row;
-                const newRow = currentRow === 'top' ? 'bottom' : 'top';
-                
-                // Update the book marker's row
-                bookMarker.dataset.row = newRow;
-                bookMarker.classList.remove('top-aligned', 'bottom-aligned');
-                bookMarker.classList.add(newRow === 'top' ? 'top-aligned' : 'bottom-aligned');
-                
-                console.log(`Moved book ${bookId} from ${currentRow} to ${newRow} row`);
-            }
-        });
+
 
         // Close Modal
         closeModalBtn.addEventListener('click', () => {
