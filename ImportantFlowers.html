@@ -44,7 +44,7 @@
             padding-left: 60px; /* Extra space for year labels on the left */
             cursor: grab;
             user-select: none;
-            height: 484px; /* 384px (initial h-96) + 100px */
+            height: 600px; /* Increased height for better spacing */
         }
 
         #timeline-line {
@@ -70,8 +70,13 @@
             z-index: 5; /* Ensure books are above timeline line */
         }
 
-        .book-marker {
-            top: 50%; /* Position on the center line */
+        .book-marker.top-aligned {
+            top: 25%; /* Position above the line */
+            transform: translate(-50%, -50%);
+        }
+
+        .book-marker.bottom-aligned {
+            top: 75%; /* Position below the line */
             transform: translate(-50%, -50%);
         }
 
@@ -276,7 +281,7 @@
         <!-- Zoom Control -->
         <div class="w-fit mx-auto mb-8 bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
             <span class="text-gray-600 text-sm">Zoom:</span>
-            <input type="range" id="zoomSlider" min="0.5" max="1.4" value="1" step="0.1" class="zoom-slider w-32">
+            <input type="range" id="zoomSlider" min="0.5" max="2.0" value="1" step="0.1" class="zoom-slider w-32">
             <span class="text-gray-600 text-sm" id="zoomValue">100%</span>
         </div>
 
@@ -615,7 +620,7 @@
         // --- Configuration ---
         const PX_PER_DAY_BASE = 2; // Base pixels per day for timeline scaling
         const BOOK_WIDTH_BASE = 100; // Base width of book cover in pixels
-        const TIMELINE_HEIGHT = 484; // Adjusted to 484px (initial 384px + 100px)
+        const TIMELINE_HEIGHT = 600; // Increased height for better spacing
         const START_YEAR = 2025;
         const END_YEAR = START_YEAR + 5; // Display 5 years out
         const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -938,8 +943,24 @@
                 const daysOffset = getDaysSinceStart(book.publicationDate);
                 const positionX = daysOffset * PX_PER_DAY_BASE * currentZoom + 60; // Add 60px for left padding
 
+                // Determine if book should be in bottom row (45-day rule)
+                const bookDate = new Date(book.publicationDate);
+                let shouldBeBottomRow = false;
+                
+                // Check if this book is within 45 days of any book that's already in the top row
+                for (let i = 0; i < index; i++) {
+                    const otherBook = books[i];
+                    const otherDate = new Date(otherBook.publicationDate);
+                    const daysDiff = Math.abs((bookDate - otherDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysDiff <= 45) {
+                        shouldBeBottomRow = true;
+                        break;
+                    }
+                }
+
                 const bookMarker = document.createElement('div');
-                bookMarker.className = 'book-marker';
+                bookMarker.className = `book-marker ${shouldBeBottomRow ? 'bottom-aligned' : 'top-aligned'}`;
                 bookMarker.style.left = `${positionX}px`;
                 bookMarker.style.width = `${BOOK_WIDTH_BASE * currentZoom}px`;
                 bookMarker.style.height = `${BOOK_WIDTH_BASE * 1.5 * currentZoom}px`; // Maintain aspect ratio
